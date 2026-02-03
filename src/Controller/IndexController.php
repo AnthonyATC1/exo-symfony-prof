@@ -10,7 +10,7 @@ final class IndexController extends AbstractController
 {
     private $title = "Bienvenue sur la première page";
 
-    /*#[Route('/index', name: 'app_index')]*/
+    #[Route("/", name: "index")]
     public function index(){
         return $this->render('View/index.html.twig', ["title" => $this->title, "age"=>18]);
     }
