@@ -40,4 +40,13 @@ class UserRepository extends ServiceEntityRepository
     //            ->getOneOrNullResult()
     //        ;
     //    }
+    public function findOneByLowerUsername(string $username): ?User
+    {
+        return $this->createQueryBuilder('u')
+            ->andWhere('LOWER(u.username) = LOWER(:username)')
+            ->setParameter('username', $username)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
 }
