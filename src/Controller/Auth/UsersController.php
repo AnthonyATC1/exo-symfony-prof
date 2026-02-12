@@ -2,17 +2,14 @@
 
 namespace App\Controller\Auth;
 
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\Request;
-use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Routing\Attribute\Route;
 use App\Entity\User;
 use App\Entity\Role;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
-use Symfony\Component\Form\Extension\Core\Type\TextType;
-use Symfony\Component\Form\Extension\Core\Type\PasswordType;
-use Symfony\Component\Form\Extension\Core\Type\EmailType;
+use App\Form\UserType;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
 
 class UsersController extends AbstractController
 {
@@ -21,64 +18,51 @@ class UsersController extends AbstractController
     public function accountForm(Request $request, EntityManagerInterface $entityManager): Response
     {
         $update = false;
+        $idRoleOriginal = null;
+
+        // infos session (comme ton cours)
+        $filter = $request->getSession()->get('filter');
+        $idRoleConnected = $filter['idRole'] ?? 999;
+        $idUserConnected = $filter['idUser'] ?? 0;
 
         if ($request->attributes->get('_route') === 'account-edit') {
+            $update = true;
 
-            $filter = $request->getSession()->get('filter');
-            $idRoleUser = $filter['idRole'];
-            $idUser = $filter['idUser'];
+            $idToEdit = (int) $request->attributes->get('id');
 
-            if ($idUser == $request->attributes->get('id') || $idRoleUser == 1) {
-
-                $user = $entityManager
-                    ->getRepository(User::class)
-                    ->find($request->attributes->get('id'));
-
-                if (!$user) {
-                    return $this->redirectToRoute('index');
-                }
-
-                $idRole = $user->getRole()->getId();
-
-            } else {
+            // droit : admin (idRole=1) OU lui-même
+            if (!($idRoleConnected == 1 || $idUserConnected == $idToEdit)) {
                 return $this->redirectToRoute('index');
             }
 
-            $update = true;
+            $user = $entityManager->getRepository(User::class)->find($idToEdit);
+            if (!$user) {
+                return $this->redirectToRoute('index');
+            }
 
+            $idRoleOriginal = $user->getRole()?->getId();
         } else {
             $user = new User();
         }
 
-        $userForm = $this->createFormBuilder($user)
-            ->add('username', TextType::class)
-            ->add('password', PasswordType::class)
-            ->add('mail', EmailType::class)
-            ->add('role', EntityType::class, [
-                'class' => Role::class,
-                'choice_label' => 'name',
-            ])
-            ->getForm();
-
-        if ($update) {
-            $userForm->remove('password');
-        }
+        $userForm = $this->createForm(UserType::class, $user, [
+            'editMode' => $update,
+            'idRoleConnected' => $idRoleConnected
+        ]);
 
         $userForm->handleRequest($request);
 
         if ($userForm->isSubmitted() && $userForm->isValid()) {
-
             $user = $userForm->getData();
 
             if (!$update) {
+                // création : hash le password
                 $passHashed = password_hash($user->getPassword(), PASSWORD_BCRYPT);
                 $user->setPassword($passHashed);
             } else {
-                if ($user->getRole() === null) {
-                    $role = $entityManager
-                        ->getRepository(Role::class)
-                        ->find($idRole);
-
+                // edit : si role disabled => il arrive null => on remet l'ancien
+                if ($user->getRole() === null && $idRoleOriginal !== null) {
+                    $role = $entityManager->getRepository(Role::class)->find($idRoleOriginal);
                     $user->setRole($role);
                 }
             }

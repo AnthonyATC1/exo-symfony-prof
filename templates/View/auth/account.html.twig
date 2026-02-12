@@ -1,61 +1,54 @@
 {% extends 'base.html.twig' %}
-
 {% form_theme formAccount 'bootstrap_4_layout.html.twig' %}
 
 {% block body %}
+    <h1 class="py-lg-5">
+        {% if editMode %}Mon Compte{% else %}Créer un compte{% endif %}
+    </h1>
+
     <div class="col-md-5">
-
-        <h1 class="py-lg-5">
-            {% if editMode %}
-                Mon Compte
-            {% else %}
-                Créer un compte
-            {% endif %}
-        </h1>
-
         {{ form_start(formAccount, {'attr': {'id': 'userForm'}}) }}
 
         {{ form_row(formAccount.username, {
             'attr': {
-                'placeholder': 'Login',
-                'readonly': editMode
+                'class': (formAccount.username.vars.valid ? '' : 'is-invalid')
             }
         }) }}
 
         {% if not editMode %}
-            {{ form_row(formAccount.password) }}
+            {{ form_row(formAccount.password, {
+                'attr': {
+                    'class': (formAccount.password.vars.valid ? '' : 'is-invalid')
+                }
+            }) }}
 
-            <div class="form-group">
-                <label for="confirmPassword">Confirm password</label>
-                <input type="password" class="form-control" id="confirmPassword">
-            </div>
+            {{ form_row(formAccount.confirm_password, {
+                'attr': {
+                    'class': (formAccount.confirm_password.vars.valid ? '' : 'is-invalid')
+                }
+            }) }}
         {% endif %}
 
         {{ form_row(formAccount.mail, {
             'attr': {
-                'placeholder': 'xxx@mail.com'
+                'placeholder': 'xxx@mail.com',
+                'class': (formAccount.mail.vars.valid ? '' : 'is-invalid')
             }
         }) }}
 
-        {% if editMode and idRole > 1 %}
-            {{ form_row(formAccount.role, {
-                'attr': {
-                    'disabled': 'disabled'
-                }
-            }) }}
-        {% else %}
-            {{ form_row(formAccount.role) }}
-        {% endif %}
+        {{ form_row(formAccount.role) }}
 
         <button id="formUserSubmit" type="submit" class="btn btn-success">
-            {% if editMode %}
-                Modifier
-            {% else %}
-                Enregistrer
-            {% endif %}
+            {% if editMode %}Modifier{% else %}Enregistrer{% endif %}
         </button>
 
         {{ form_end(formAccount) }}
-
     </div>
 {% endblock %}
+
+{% block javascripts %}
+    {% if not editMode %}
+        <script src="{{ asset('js/listener.js') }}"></script>
+    {% endif %}
+{% endblock %}
+
